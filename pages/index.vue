@@ -2,11 +2,18 @@
   <section class="container">
     <div class="row">
       <div class="col p-2">
-        <button class="btn btn-outline-primary btn-block" @click="saveList()">Save list</button>
-        <button class="btn btn-outline-danger btn-block" @click="clearList()">Clear list</button>
-        <button class="btn btn-outline-success btn-block" @click="generateFakeVideos(5)">Generate videos</button>
-        <button class="btn btn-outline-danger" @click="signout()" v-if="user">Signout</button>
-        <button class="btn btn-outline-success" @click="signin()" v-else>Login</button>
+        <button class="btn btn-outline-primary" @click="saveList()">Save list</button>
+        <button class="btn btn-outline-danger" @click="clearList()">Clear list</button>
+        <button class="btn btn-outline-success" @click="generateFakeVideos(5)">Generate videos</button>
+        <button class="btn btn-outline-warning" @click="loadVideos()">Load</button>
+      </div>
+      <div class="col p-2">
+        <span v-if="user">
+          ({{user.displayName}})&nbsp;<span class="btn btn-link" @click="signout()">Signout</span>
+        </span>
+        <span v-else>
+          <span class="btn btn-link" @click="signin()">Login</span>
+        </span>
       </div>
     </div>
     <div class="row">
@@ -14,14 +21,24 @@
         <table class="table">
           <thead>
             <tr>
+              <th>ID</th>
               <th>Name</th>
               <th>Date Created</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="video in videos">
+            <tr v-for="video in newVideos">
+              <td></td>
               <td @click="showInfo(video)">{{video.name}}</td>
               <td>{{video.dateCreated}}</td>
+              <td><button class="btn btn-sm btn-danger" @click="deleteVideo(video)" v-if="video.id">Delete</button></td>
+            </tr>
+            <tr v-for="(value, key) in savedVideos">
+              <td>{{key}}</td>
+              <td @click="showInfo(video)">{{savedVideos[key].name}}</td>
+              <td>{{savedVideos[key].dateCreated}}</td>
+              <td><button class="btn btn-sm btn-danger" @click="deleteVideo(savedVideos[key])">Delete</button></td>
             </tr>
           </tbody>
         </table>
@@ -32,6 +49,7 @@
 
 <script>
 
+  import _ from 'lodash'
   import firebase from '../services/fireinit'
   import { auth, GoogleProvider } from '@/services/fireinit'
 
@@ -40,7 +58,8 @@
 export default {
   data(){
     return {
-      videos: [],
+      newVideos: [],
+      savedVideos: {},
       user: null,
       token: null
     }
@@ -53,21 +72,32 @@ export default {
         })
       }
     },
+    loadVideos(){
+      database.ref(`${this.user.uid}/thumbnail-previews`).once('value').then(snapshot => {
+        this.savedVideos = snapshot.val();
+      });
+    },
+    deleteVideo(video){
+
+    },
     clearList(){
-      this.videos = [];
+      this.newVideos = [];
+      this.savedVideos = [];
     },
     saveList(){
       if(this.user) {
-        for (let i = 0; i < this.videos.length; i++) {
-          var newRef = database.ref(`${this.user.uid}/thumbnail-previews/`).push({
-            name: this.videos[i].name,
-            dateCreated: this.videos[i].dateCreated
-          }).then((snap) => {
-            this.videos[i].id = snap.key
-          }).catch(e => {
-            console.log(e.code);
-          });
+        debugger
+        for (let i = 0; i < this.newVideos.length; i++) {
+          if(!this.newVideos[i].id) {
+            database.ref(`${this.user.uid}/thumbnail-previews/`).push({
+              name: this.newVideos[i].name,
+              dateCreated: this.newVideos[i].dateCreated
+            }).catch(e => {
+              console.log(e.code);
+            });
+          }
         }
+        this.newVideos = [];
       }
     },
     generateFakeVideos(num){
@@ -78,7 +108,7 @@ export default {
           dateCreated: new Date(Math.floor(Math.random() * 35) + 1984, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28)).getTime()
         })
       }
-      this.videos = [...videos];
+      this.newVideos = [...videos, ...this.newVideos];
     },
     signin(){
       auth.signInWithPopup(GoogleProvider).then((result) => {
@@ -119,6 +149,10 @@ export default {
           console.log('Received update');
           console.log(snapshot.val());
         });
+
+        database.ref(`${this.user.uid}/thumbnail-previews`).on('value', snapshot => {
+          this.savedVideos = snapshot.val();
+        });
         return;
       }
       this.user = null;
@@ -141,8 +175,6 @@ export default {
     // thumbnailPreviewsRef.on('child_removed', snapshot => {
     //   console.log(snapshot.val());
     // });
-
-    this.generateFakeVideos(5);
   }
 }
 </script>
