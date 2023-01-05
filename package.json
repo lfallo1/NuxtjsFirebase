@@ -16,7 +16,7 @@
     "bootstrap-vue": "^1.0.2",
     "firebase": "^6.2.4",
     "lodash": "^4.17.11",
-    "nuxt": "^1.0.0"
+    "nuxt": "^3.0.0"
   },
   "devDependencies": {
     "cross-env": "^5.0.1"
